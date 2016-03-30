@@ -35,7 +35,7 @@ def start_selenium(request):
     try:
         cli.remove_container('selenium', force=True)
     except docker.errors.NotFound:
-        print('Couldn''t removing selenium container: not found')
+        print('Couldn''t remove selenium container: not found')
     cli.create_container(image='selenium/standalone-chrome-debug',
                          name='selenium',
                          ports=[4444, 5900],
