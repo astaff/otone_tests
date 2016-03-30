@@ -1,0 +1,33 @@
+controller:
+  image: crossbar
+  tty: true
+  ports:
+    - "8080:8080"
+labware:
+  image: labware
+  environment:
+    - CROSSBAR_HOST=controller
+  links:
+    - controller
+driver:
+  environment:
+    - CROSSBAR_HOST=controller
+    - SMOOTHIE_SIMULATE=false
+    - SMOOTHIE_HOST=smoothie
+    - SMOOTHIE_PORT=3333
+  image: driver
+  links:
+    - controller
+    - smoothie
+frontend:
+  image: frontend
+  ports:
+    - "5000:5000"
+  links:
+    - controller
+smoothie:
+  image: smoothie-simulator
+  tty: true
+  ports:
+    - "3333:3333"
+
