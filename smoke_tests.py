@@ -9,6 +9,16 @@ import time
 # all ports exposed in containers running are
 # mapped to this address
 docker_host_ip = '172.17.0.1'
+# url for OT.one frontend. should be in /etc/hosts
+# of a selenium container running
+otone_url = 'http://otone.local:5000'
+# Use selenium/standalone-chrome-debug with port 5900 mapped
+# to view test session using VNC
+# use selenium/standalone-chrome for normal operations
+selenium_docker_image = 'selenium/standalone-chrome'
+# name of a smoothie simulator container to connect to.
+# the name is constructed by bootstrap's docker-compose.
+smoothie_container_name = '/home_smoothie_1'
 
 
 @pytest.fixture(scope='module')
@@ -24,7 +34,7 @@ def attach_to_smoothie():
     # we can unpack it into a variable as a tuple with one element
     # ex: a, = tuple([1])
     c, = filter(
-        lambda a: '/home_smoothie_1' in a['Names'],
+        lambda a: smoothie_container_name in a['Names'],
         cli.containers())
     smoothie_id = c['Id']
 
@@ -43,10 +53,7 @@ def start_selenium(request):
     # docker-py doesn't automatically pull a container
     # you should run docker pull selenium/standalone-chrome-debug
     # before running the test
-    # Use selenium/standalone-chrome-debug with port 5900 mapped
-    # to view test session using VNC
-    # use selenium/standalone-chrome for normal operations
-    cli.create_container(image='selenium/standalone-chrome-debug',
+    cli.create_container(image=selenium_docker_image,
                          name='selenium',
                          ports=[4444, 5900],
                          host_config=cli.create_host_config(
@@ -60,7 +67,8 @@ def start_selenium(request):
                             )
                          )
     cli.start('selenium')
-    time.sleep(5)
+    print('Starting Selenium container from {0}'.format(selenium_docker_image))
+    time.sleep(2)
     driver = webdriver.Remote(
         'http://localhost:4444/wd/hub',
         desired_capabilities=webdriver.DesiredCapabilities.CHROME)
@@ -79,21 +87,26 @@ def test_home(attach_to_smoothie, start_selenium):
     """
     cli, smoothie_id = attach_to_smoothie
     driver = start_selenium
-    driver.get('http://otone.local:5000')
-    time.sleep(5)
+    driver.get(otone_url)
+    print('Loading {0}'.format(otone_url))
+    time.sleep(2)
     test_set = {
         'ALL': b'G28\r\n',
         'X': b'G28 X\r\n',
         'Y': b'G28 Y\r\n',
-        'Z': b'G28 Z\r\n'
+        'Z': b'G28 Z\r\n',
+        'A': b'G28 A\r\n',
+        'B': b'G28 B\r\n',
+        'A3': b'G90 G0 X10 Y100\r\n'
     }
 
     def logs():
         return cli.logs(smoothie_id, stdout=True).splitlines()
 
     for key, value in test_set.items():
+        print('Clicking {0}'.format(key))
         log = len(logs())
         driver.find_element_by_link_text(key).click()
-        time.sleep(1)
+        time.sleep(0.1)
         res, = logs()[log:]
         assert eval(res) == value
