@@ -5,6 +5,9 @@ import docker.errors
 import pytest
 import time
 
+# address of docker0 interface on the host machine
+# all ports exposed in containers running are
+# mapped to this address
 docker_host_ip = '172.17.0.1'
 
 
