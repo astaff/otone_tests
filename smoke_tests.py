@@ -1,21 +1,21 @@
-#!/usr/bin/env python3.5
-from __future__ import print_function
+#!/usr/bin/env python3
 from docker import Client
 from selenium import webdriver
 import docker.errors
-import itertools
-import logging
 import pytest
 import time
 
-
-def tail_log_lines(logs):
-    while True:
-        yield ''.join(itertools.takewhile(lambda c: c != '\n', logs))
+docker_host_ip = '172.17.0.1'
 
 
 @pytest.fixture(scope='module')
 def attach_to_smoothie():
+    """Find smoothie-simulator container.
+    When OT.one is started from bootstrap container with
+    docker-compose, it creates home_smoothie_1 container
+    which receives G-code from the driver and sends it to stdout
+    Returns instance of docker cli and container id of home_smoothie_1.
+    """
     cli = Client(base_url='unix://var/run/docker.sock')
     # cli.containers() is expected to return a list with only one container
     # we can unpack it into a variable as a tuple with one element
@@ -31,11 +31,18 @@ def attach_to_smoothie():
 
 @pytest.fixture(scope='module')
 def start_selenium(request):
+    """Starts selenium container, connects to it and returns a driver"""
     cli = Client(base_url='unix://var/run/docker.sock')
     try:
         cli.remove_container('selenium', force=True)
     except docker.errors.NotFound:
-        print('Couldn''t remove selenium container: not found')
+        print("Couldn't remove selenium container: not found")
+    # docker-py doesn't automatically pull a container
+    # you should run docker pull selenium/standalone-chrome-debug
+    # before running the test
+    # Use selenium/standalone-chrome-debug with port 5900 mapped
+    # to view test session using VNC
+    # use selenium/standalone-chrome for normal operations
     cli.create_container(image='selenium/standalone-chrome-debug',
                          name='selenium',
                          ports=[4444, 5900],
@@ -45,7 +52,7 @@ def start_selenium(request):
                                 5900: 5900
                             },
                             extra_hosts={
-                                 'otone.local': '172.17.0.1'
+                                 'otone.local': docker_host_ip
                             }
                             )
                          )
@@ -64,6 +71,9 @@ def start_selenium(request):
 
 
 def test_home(attach_to_smoothie, start_selenium):
+    """Click ALL, X, Y, Z and listen to corresponding G-code commands
+    coming from smoothie simulator
+    """
     cli, smoothie_id = attach_to_smoothie
     driver = start_selenium
     driver.get('http://otone.local:5000')
