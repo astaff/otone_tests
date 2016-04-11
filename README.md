@@ -8,4 +8,4 @@ Testing is done using Selenium and Chrome Driver running in a container. These t
 3. Build smoothie simulator: ```docker build -t smoothie-simulator .```
 4. Run device software overriding docker-compose.yml to add smoothie-simulator into the mix: ```docker run -d -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd)/conf/docker-compose.yml:/home/docker-compose.yml bootstrap```
 5. Install test requirements ```pip3 install -r requirements.txt```
-6. Run tests: ```py.test -s smote_tests.py```
+6. Run tests: ```py.test -s smoke_tests.py```
